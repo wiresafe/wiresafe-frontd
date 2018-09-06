@@ -7,6 +7,7 @@ import com.wiresafe.front.undertow.handlers.*;
 import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.server.handlers.BlockingHandler;
+import io.undertow.util.HttpString;
 
 import java.net.URL;
 import java.util.Objects;
@@ -35,6 +36,14 @@ public class UndertowFrontd {
             Undertow gwSrv = Undertow.builder()
                     .addHttpListener(port, "0.0.0.0")
                     .setHandler(Handlers.routing()
+                            .add("OPTIONS", "*", exchange -> {
+                                exchange.setStatusCode(200);
+                                exchange.getResponseHeaders().add(HttpString.tryFromString("Access-Control-Allow-Origin"), "*");
+                                exchange.getResponseHeaders().add(HttpString.tryFromString("Access-Control-Allow-Headers"), "origin, content-type, accept, authorization, x-api-key");
+                                exchange.getResponseHeaders().add(HttpString.tryFromString("Access-Control-Allow-Credentials"), "true");
+                                exchange.getResponseHeaders().add(HttpString.tryFromString("Access-Control-Allow-Methods"), "GET, POST, PUT, DELETE, OPTIONS, HEAD");
+                                exchange.endExchange();
+                            })
                             .add("POST", "/auth/login", new BlockingHandler(new AuthLoginHandler(frontend)))
                             .add("GET", "/auth/logout", new BlockingHandler(new AuthLogoutHandler(frontend)))
                             .add("GET", "/user/{userId}", new BlockingHandler(new UserGetHandler(frontend)))
