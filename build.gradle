@@ -1,0 +1,40 @@
+apply plugin: 'java'
+apply plugin: 'application'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.4'
+    }
+}
+
+mainClassName = 'com.wiresafe.front.undertow.UndertowFrontd'
+
+dependencies {
+    compile 'org.slf4j:slf4j-simple:1.7.25'
+    compile 'io.undertow:undertow-core:2.0.1.Final'
+    compile 'io.kamax:matrix-java-sdk:0.0.14'
+    compile 'com.google.guava:guava:25.1-jre'
+
+    // For Synapse DB
+    compile 'com.mchange:c3p0:0.9.5.2'
+    compile 'org.postgresql:postgresql:42.1.4'
+
+    testCompile 'junit:junit:4.12'
+}
+
+repositories {
+    maven { url "https://kamax.io/maven/releases" }
+    maven { url "https://kamax.io/maven/snapshots" }
+    jcenter()
+}
+
+shadowJar {
+    baseName = project.name
+    classifier = null
+    version = null
+}

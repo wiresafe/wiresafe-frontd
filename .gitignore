@@ -1,0 +1,7 @@
+# Build directories
+.gradle/
+build/
+out/
+
+# IDEs directories
+.idea/
