@@ -1,22 +1,24 @@
 apply plugin: 'java'
-apply plugin: 'application'
-apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'org.springframework.boot'
 
 buildscript {
     repositories {
-        jcenter()
+        mavenCentral()
     }
-
     dependencies {
-        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.4'
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:2.0.3.RELEASE")
     }
 }
 
-mainClassName = 'com.wiresafe.front.undertow.UndertowFrontd'
+repositories {
+    maven { url "https://kamax.io/maven/releases" }
+    maven { url "https://kamax.io/maven/snapshots" }
+    jcenter()
+}
+
 
 dependencies {
-    compile 'org.slf4j:slf4j-simple:1.7.25'
-    compile 'io.undertow:undertow-core:2.0.1.Final'
+    compile 'org.springframework.boot:spring-boot-starter-web:2.0.3.RELEASE'
     compile 'io.kamax:matrix-java-sdk:0.0.14'
     compile 'com.google.guava:guava:25.1-jre'
 
@@ -27,14 +29,6 @@ dependencies {
     testCompile 'junit:junit:4.12'
 }
 
-repositories {
-    maven { url "https://kamax.io/maven/releases" }
-    maven { url "https://kamax.io/maven/snapshots" }
-    jcenter()
-}
-
-shadowJar {
-    baseName = project.name
-    classifier = null
-    version = null
+bootJar {
+    launchScript()
 }

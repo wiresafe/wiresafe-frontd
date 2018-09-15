@@ -1,23 +1,25 @@
-package com.wiresafe.front.undertow.handlers;
+package com.wiresafe.front.spring.controller;
 
 import com.google.gson.JsonObject;
 import com.wiresafe.front.model.FrontApi;
 import com.wiresafe.front.model.SyncChunk;
 import io.kamax.matrix.json.GsonUtil;
-import io.undertow.server.HttpServerExchange;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.stream.Collectors;
 
-public class SyncHandler extends HttpServerExchangeHandler {
+@RestController
+@CrossOrigin
+@RequestMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+public class SyncController extends BaseController {
 
-    public SyncHandler(FrontApi frontend) {
-        super(frontend);
-    }
+    private FrontApi model;
 
-    @Override
-    public void handleRequest(HttpServerExchange exchange) {
-        String since = findParameter(exchange, "since").orElse(null);
-        SyncChunk chunk = frontend.with(getAccessToken(exchange)).sync(since);
+    @GetMapping("/sync")
+    public String getData(HttpServletRequest request, @RequestParam(required = false) String since) {
+        SyncChunk chunk = model.with(getAccessToken(request)).sync(since);
 
         JsonObject channels = new JsonObject();
         channels.add("join", GsonUtil.asArray(chunk.getJoined()));
@@ -38,7 +40,7 @@ public class SyncHandler extends HttpServerExchangeHandler {
                 }).collect(Collectors.toList())));
         res.addProperty("nextToken", chunk.getNextToken());
 
-        sendJsonResponse(exchange, res);
+        return toJson(res);
     }
 
 }
