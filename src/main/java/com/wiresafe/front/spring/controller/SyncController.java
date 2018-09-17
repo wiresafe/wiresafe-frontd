@@ -3,7 +3,9 @@ package com.wiresafe.front.spring.controller;
 import com.google.gson.JsonObject;
 import com.wiresafe.front.model.FrontApi;
 import com.wiresafe.front.model.SyncChunk;
+import com.wiresafe.front.spring.factory.FrontApiFactory;
 import io.kamax.matrix.json.GsonUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,6 +18,11 @@ import java.util.stream.Collectors;
 public class SyncController extends BaseController {
 
     private FrontApi model;
+
+    @Autowired
+    public SyncController(FrontApiFactory factory) {
+        this.model = factory.get();
+    }
 
     @GetMapping("/sync")
     public String getData(HttpServletRequest request, @RequestParam(required = false) String since) {
