@@ -1,5 +1,6 @@
 package com.wiresafe.front.spring.controller;
 
+import com.wiresafe.front.exception.AuthenticationRequiredException;
 import io.kamax.matrix.json.GsonUtil;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -17,7 +18,7 @@ public class BaseController {
     protected String getAccessToken(HttpServletRequest request) {
         String apiKey = request.getHeader("X-API-Key");
         if (StringUtils.isBlank(apiKey)) {
-            throw new RuntimeException("API Key missing");
+            throw new AuthenticationRequiredException("API Key missing");
         }
 
         return apiKey;
