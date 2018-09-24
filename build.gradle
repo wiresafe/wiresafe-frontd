@@ -11,15 +11,15 @@ buildscript {
 }
 
 repositories {
+    jcenter()
     maven { url "https://kamax.io/maven/releases" }
     maven { url "https://kamax.io/maven/snapshots" }
-    jcenter()
 }
 
 
 dependencies {
     compile 'org.springframework.boot:spring-boot-starter-web:2.0.3.RELEASE'
-    compile 'io.kamax:matrix-java-sdk:0.0.14'
+    compile 'io.kamax:matrix-java-sdk:0.0.14-1-g0f63881'
     compile 'com.google.guava:guava:25.1-jre'
 
     // For Synapse DB

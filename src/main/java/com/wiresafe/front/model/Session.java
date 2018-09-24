@@ -3,6 +3,7 @@ package com.wiresafe.front.model;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.wiresafe.front.HexUtil;
+import io.kamax.matrix._MatrixContent;
 import io.kamax.matrix.client._SyncData;
 import io.kamax.matrix.client.regular.MatrixHttpClient;
 import io.kamax.matrix.client.regular.SyncOptions;
@@ -17,6 +18,7 @@ import io.kamax.matrix.room.RoomCreationOptions;
 import io.kamax.matrix.room._MatrixRoomMessageChunk;
 import org.apache.commons.lang3.StringUtils;
 
+import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -258,6 +260,15 @@ public class Session {
         });
 
         return new SyncChunk(joined, left, messages, HexUtil.encode(data.nextBatchToken()));
+    }
+
+    public String upload(InputStream io, long length, String type) {
+        String mxcUri = client.putMedia(io, length, type);
+        return HexUtil.encode(mxcUri);
+    }
+
+    public _MatrixContent download(String id) {
+        return client.getMedia(HexUtil.decode(id));
     }
 
 }
