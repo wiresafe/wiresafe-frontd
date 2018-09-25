@@ -79,6 +79,8 @@ public class ChannelController extends BaseController {
                     output.addProperty("timestamp", msg.getTimestamp());
                     output.addProperty("sender", "/user/" + msg.getSender());
                     output.addProperty("content", msg.getContent());
+                    output.addProperty("mediaId", msg.getMediaId());
+                    output.addProperty("filename", msg.getFilename());
                     return output;
                 }).collect(Collectors.toList())));
 
@@ -93,7 +95,7 @@ public class ChannelController extends BaseController {
     @PostMapping("/{channelId}/messages/")
     public String addChanelMessage(HttpServletRequest request, @PathVariable String channelId) {
         JsonObject body = GsonUtil.parseObj(getBody(request));
-        String evId = model.with(getAccessToken(request)).putMessage(channelId, GsonUtil.getStringOrThrow(body, "content"));
+        String evId = model.with(getAccessToken(request)).putMessage(channelId, body);
 
         return toJson(GsonUtil.makeObj("id", evId));
     }

@@ -8,6 +8,8 @@ public class Message {
     private long timestamp;
     private String sender;
     private String content;
+    private String mediaId;
+    private String filename;
 
     public String getId() {
         return id;
@@ -55,6 +57,22 @@ public class Message {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public String getMediaId() {
+        return mediaId;
+    }
+
+    public void setMediaId(String mediaId) {
+        this.mediaId = mediaId;
+    }
+
+    public String getFilename() {
+        return filename;
+    }
+
+    public void setFilename(String filename) {
+        this.filename = filename;
     }
 
 }

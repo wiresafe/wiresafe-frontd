@@ -3,6 +3,7 @@ package com.wiresafe.front.model;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.wiresafe.front.HexUtil;
+import com.wiresafe.front.exception.InvalidArgumentException;
 import io.kamax.matrix._MatrixContent;
 import io.kamax.matrix.client._SyncData;
 import io.kamax.matrix.client.regular.MatrixHttpClient;
@@ -17,6 +18,7 @@ import io.kamax.matrix.room.MatrixRoomMessageChunkOptions;
 import io.kamax.matrix.room.RoomCreationOptions;
 import io.kamax.matrix.room._MatrixRoomMessageChunk;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.http.MediaType;
 
 import java.io.InputStream;
 import java.util.*;
@@ -39,14 +41,25 @@ public class Session {
         return new User(client, id);
     }
 
-    private Message build(MatrixJsonRoomMessageEvent ev) {
+    private Message build(MatrixJsonRoomMessageEvent ev, String roomId) {
         Message msg = new Message();
         msg.setId(HexUtil.encode(ev.getId()));
-        msg.setChannelId(HexUtil.encode(ev.getRoomId()));
-        msg.setType("Text");
+        msg.setChannelId(HexUtil.encode(roomId));
         msg.setTimestamp(ev.getTime().toEpochMilli());
         msg.setSender(HexUtil.encode(ev.getSender().getId()));
-        msg.setContent(ev.getFormattedBody().orElseGet(ev::getBody));
+        if ("m.text".equalsIgnoreCase(ev.getBodyType())) {
+            msg.setType("Text");
+            msg.setContent(ev.getFormattedBody().orElseGet(ev::getBody));
+        }
+
+        if ("m.file".equalsIgnoreCase(ev.getBodyType())) {
+            JsonObject content = GsonUtil.getObj(ev.getJson(), "content");
+            msg.setType("Attachment");
+            msg.setMediaId(HexUtil.encode(GsonUtil.getStringOrThrow(content, "url")));
+            msg.setContent(ev.getBody());
+            GsonUtil.findString(content, "filename").ifPresent(msg::setFilename);
+        }
+
         return msg;
     }
 
@@ -167,17 +180,12 @@ public class Session {
             SyncOptions opts = SyncOptions.build().setFilter(GsonUtil.get().toJson(filter)).get();
 
             _SyncData sync = client.sync(opts);
-            _SyncData.JoinedRoom room = sync.getRooms().getJoined().stream().findFirst().orElseThrow(NotFoundException::new);
-            List<Message> messages = room.getTimeline().getEvents().stream().map(ev -> new MatrixJsonRoomMessageEvent(ev.getJson())).map(ev -> {
-                Message msg = new Message();
-                msg.setId(HexUtil.encode(ev.getId()));
-                msg.setChannelId(channelId);
-                msg.setType("Text");
-                msg.setTimestamp(ev.getTime().toEpochMilli());
-                msg.setSender(HexUtil.encode(ev.getSender().getId()));
-                msg.setContent(ev.getFormattedBody().orElseGet(ev::getBody));
-                return msg;
-            }).collect(Collectors.toList());
+            _SyncData.JoinedRoom room = sync.getRooms().getJoined().stream()
+                    .findFirst().orElseThrow(NotFoundException::new);
+            List<Message> messages = room.getTimeline().getEvents().stream()
+                    .map(ev -> new MatrixJsonRoomMessageEvent(ev.getJson()))
+                    .map(ev -> build(ev, roomId))
+                    .collect(Collectors.toList());
 
             return new MessageChunk(HexUtil.encode(room.getTimeline().getPreviousBatchToken()), null, messages);
         } else { // We want a sync from a previous batch
@@ -199,16 +207,7 @@ public class Session {
             String endToken = HexUtil.encode(chunk.getEndToken());
             List<Message> messages = chunk.getEvents().stream()
                     .filter(ev -> "m.room.message".equals(ev.getType()))
-                    .map(ev -> new MatrixJsonRoomMessageEvent(ev.getJson())).map(ev -> {
-                        Message msg = new Message();
-                        msg.setId(HexUtil.encode(ev.getId()));
-                        msg.setChannelId(channelId);
-                        msg.setType("Text");
-                        msg.setTimestamp(ev.getTime().toEpochMilli());
-                        msg.setSender(HexUtil.encode(ev.getSender().getId()));
-                        msg.setContent(ev.getFormattedBody().orElseGet(ev::getBody));
-                        return msg;
-                    }).collect(Collectors.toList());
+                    .map(ev -> new MatrixJsonRoomMessageEvent(ev.getJson())).map(ev -> build(ev, roomId)).collect(Collectors.toList());
 
             if (StringUtils.equals(startToken, endToken)) {
                 startToken = null;
@@ -219,9 +218,33 @@ public class Session {
         }
     }
 
-    public String putMessage(String channelId, String content) {
-        String evId = client.getRoom(HexUtil.decode(channelId)).sendFormattedText(content, content);
-        return HexUtil.encode(evId);
+    public String putMessage(String channelId, JsonObject message) {
+        String type = GsonUtil.findString(message, "@type").orElse("Text");
+        if ("Text".equalsIgnoreCase(type)) {
+            String content = GsonUtil.getStringOrThrow(message, "content");
+            String evId = client.getRoom(HexUtil.decode(channelId)).sendFormattedText(content, content);
+            return HexUtil.encode(evId);
+        } else if ("Attachment".equalsIgnoreCase(type)) {
+            String mediaId = GsonUtil.getStringOrThrow(message, "mediaId");
+            Optional<String> filename = GsonUtil.findString(message, "filename");
+            Optional<String> content = GsonUtil.findString(message, "content");
+
+            JsonObject fileInfo = new JsonObject();
+            fileInfo.addProperty("mimetype", MediaType.APPLICATION_OCTET_STREAM_VALUE);
+            fileInfo.addProperty("size", 0);
+
+            JsonObject data = new JsonObject();
+            data.addProperty("msgtype", "m.file");
+            data.addProperty("url", HexUtil.decode(mediaId));
+            data.add("info", fileInfo);
+            data.addProperty("body", content.orElse(filename.orElse("")));
+            filename.ifPresent(v -> data.addProperty("filename", v));
+
+            String evId = client.getRoom(HexUtil.decode(channelId)).sendEvent("m.room.message", data);
+            return HexUtil.encode(evId);
+        } else {
+            throw new InvalidArgumentException("Type value is unknown: " + type);
+        }
     }
 
     public SyncChunk sync(String since) {
@@ -241,8 +264,7 @@ public class Session {
                         json.addProperty(EventKey.RoomId.get(), room.getId());
                         return new MatrixJsonRoomMessageEvent(json);
                     })
-                    .filter(ev -> "m.text".equals(ev.getBodyType()))
-                    .forEach(ev -> messages.add(build(ev)));
+                    .forEach(ev -> messages.add(build(ev, room.getId())));
         });
 
         data.getRooms().getLeft().forEach(room -> {
@@ -255,8 +277,7 @@ public class Session {
                         json.addProperty(EventKey.RoomId.get(), room.getId());
                         return new MatrixJsonRoomMessageEvent(json);
                     })
-                    .filter(ev -> "m.text".equals(ev.getBodyType()))
-                    .forEach(ev -> messages.add(build(ev)));
+                    .forEach(ev -> messages.add(build(ev, room.getId())));
         });
 
         return new SyncChunk(joined, left, messages, HexUtil.encode(data.nextBatchToken()));
