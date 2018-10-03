@@ -43,6 +43,8 @@ public class SyncController extends BaseController {
                     output.addProperty("timestamp", msg.getTimestamp());
                     output.addProperty("sender", "/user/" + msg.getSender());
                     output.addProperty("content", msg.getContent());
+                    output.addProperty("mediaId", msg.getMediaId());
+                    output.addProperty("filename", msg.getFilename());
                     return output;
                 }).collect(Collectors.toList())));
         res.addProperty("nextToken", chunk.getNextToken());
