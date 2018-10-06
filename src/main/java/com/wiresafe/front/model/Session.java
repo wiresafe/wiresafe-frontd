@@ -149,7 +149,7 @@ public class Session {
         throw new RuntimeException();
     }
 
-    public MessageChunk getMessages(String channelId, String token, String direction) {
+    public MessageChunk getMessages(String channelId, String token, String direction, String type) {
         String roomId = HexUtil.decode(channelId);
 
         if ("HEAD".equals(token)) { // We want a sync from the start
@@ -162,6 +162,12 @@ public class Session {
             JsonArray messageEventType = new JsonArray();
             messageEventType.add("m.room.message");
             JsonObject roomEventFilter = GsonUtil.makeObj("types", messageEventType);
+            if (StringUtils.equals("Attachment", type)) {
+                roomEventFilter.addProperty("contains_url", true);
+            }
+            if (StringUtils.equals("Text", type)) {
+                roomEventFilter.addProperty("contains_url", false);
+            }
 
             JsonArray roomIds = new JsonArray();
             roomIds.add(roomId);

@@ -64,11 +64,12 @@ public class ChannelController extends BaseController {
             HttpServletRequest request,
             @PathVariable String channelId,
             @RequestParam(required = false) String from,
-            @RequestParam(required = false) String direction
+            @RequestParam(required = false) String direction,
+            @RequestParam(required = false) String type
     ) {
         from = StringUtils.defaultIfBlank(from, "HEAD");
         direction = StringUtils.defaultIfBlank(direction, "previous");
-        MessageChunk chunk = model.with(getAccessToken(request)).getMessages(channelId, from, direction);
+        MessageChunk chunk = model.with(getAccessToken(request)).getMessages(channelId, from, direction, type);
         JsonObject res = new JsonObject();
         res.add("messages", GsonUtil.asArrayObj(chunk.getMessages().stream()
                 .map(msg -> {
