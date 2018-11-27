@@ -6,13 +6,15 @@ import com.wiresafe.front.model.User;
 import com.wiresafe.front.spring.factory.FrontApiFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @CrossOrigin
 @RequestMapping(path = "/user", produces = MediaType.APPLICATION_JSON_VALUE)
+@Async
 public class UserController extends BaseController {
 
     private FrontApi model;
@@ -23,14 +25,17 @@ public class UserController extends BaseController {
     }
 
     @GetMapping("/{userId}")
-    public String getUser(HttpServletRequest request, @PathVariable String userId) {
-        User user = model.with(getAccessToken(request)).getUser(userId);
+    public CompletableFuture<String> getUser(
+            @RequestHeader("X-API-Key") String apiKey,
+            @PathVariable String userId
+    ) {
+        User user = model.with(apiKey).getUser(userId);
 
         JsonObject res = new JsonObject();
         res.addProperty("@id", "/user/" + user.getId());
         res.addProperty("name", user.getName());
 
-        return toJson(res);
+        return CompletableFuture.completedFuture(toJson(res));
     }
 
 }

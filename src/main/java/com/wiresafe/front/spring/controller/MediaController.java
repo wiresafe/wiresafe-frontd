@@ -8,20 +8,20 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 
 @Controller
+@ResponseBody
 @CrossOrigin
 @RequestMapping("/media")
+@Async
 public class MediaController extends BaseController {
 
     private FrontApi model;
@@ -32,27 +32,32 @@ public class MediaController extends BaseController {
     }
 
     @RequestMapping("/download/{mediaId}")
-    public void download(HttpServletRequest request, HttpServletResponse response, @PathVariable String mediaId) throws IOException {
-        _MatrixContent content = model.with(getAccessToken(request)).download(mediaId);
+    public CompletableFuture<byte[]> download(
+            @RequestHeader("X-API-Key") String apiKey,
+            @PathVariable String mediaId,
+            HttpServletResponse response
+    ) {
+        _MatrixContent content = model.with(apiKey).download(mediaId);
         byte[] data = content.getData();
         response.setContentType(content.getType().orElse(MediaType.APPLICATION_OCTET_STREAM_VALUE));
         response.setContentLength(data.length);
-        IOUtils.write(data, response.getOutputStream());
+        return CompletableFuture.completedFuture(data);
     }
 
     @RequestMapping(path = "/upload", produces = MediaType.APPLICATION_JSON_VALUE)
-    @ResponseBody
-    public String upload(HttpServletRequest request) {
+    public CompletableFuture<String> upload(
+            @RequestHeader("X-API-Key") String apiKey,
+            HttpServletRequest request
+    ) {
         String contentType = request.getHeader("Content-Type");
         if (StringUtils.isBlank(contentType)) {
             throw new InvalidArgumentException("Content-Type header is missing");
         }
 
         try {
-            int length = request.getContentLength();
-            ByteArrayInputStream input = new ByteArrayInputStream(IOUtils.readFully(request.getInputStream(), length));
-            String mediaId = model.with(getAccessToken(request)).upload(input, length, contentType);
-            return toJson(GsonUtil.makeObj("id", mediaId));
+            byte[] data = IOUtils.readFully(request.getInputStream(), request.getContentLength());
+            String mediaId = model.with(apiKey).upload(data, contentType);
+            return CompletableFuture.completedFuture(toJson(GsonUtil.makeObj("id", mediaId)));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

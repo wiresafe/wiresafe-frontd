@@ -7,14 +7,16 @@ import com.wiresafe.front.spring.factory.FrontApiFactory;
 import io.kamax.matrix.json.GsonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @RestController
 @CrossOrigin
 @RequestMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+@Async
 public class SyncController extends BaseController {
 
     private FrontApi model;
@@ -25,8 +27,11 @@ public class SyncController extends BaseController {
     }
 
     @GetMapping("/sync")
-    public String getData(HttpServletRequest request, @RequestParam(required = false) String since) {
-        SyncChunk chunk = model.with(getAccessToken(request)).sync(since);
+    public CompletableFuture<String> getData(
+            @RequestHeader("X-API-Key") String apiKey,
+            @RequestParam(required = false) String since
+    ) {
+        SyncChunk chunk = model.with(apiKey).sync(since);
 
         JsonObject channels = new JsonObject();
         channels.add("join", GsonUtil.asArray(chunk.getJoined()));
@@ -49,7 +54,7 @@ public class SyncController extends BaseController {
                 }).collect(Collectors.toList())));
         res.addProperty("nextToken", chunk.getNextToken());
 
-        return toJson(res);
+        return CompletableFuture.completedFuture(toJson(res));
     }
 
 }

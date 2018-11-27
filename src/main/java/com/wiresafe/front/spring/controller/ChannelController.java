@@ -10,14 +10,17 @@ import io.kamax.matrix.json.GsonUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @RestController
 @CrossOrigin
 @RequestMapping(path = "/channel", produces = MediaType.APPLICATION_JSON_VALUE)
+@Async
 public class ChannelController extends BaseController {
 
     private FrontApi model;
@@ -28,20 +31,25 @@ public class ChannelController extends BaseController {
     }
 
     @GetMapping("/")
-    public String listChannels(HttpServletRequest request) {
+    public CompletableFuture<String> listChannels(
+            @RequestHeader("X-API-Key") String apiKey
+    ) {
         JsonArray channels = new JsonArray();
-        model.with(getAccessToken(request)).getChannels().forEach(channel -> {
+        model.with(apiKey).getChannels().forEach(channel -> {
             JsonObject obj = new JsonObject();
             obj.addProperty("@id", "/channel/" + channel.getId());
             obj.addProperty("name", channel.getName());
             channels.add(obj);
         });
-        return toJson(channels);
+        return CompletableFuture.completedFuture(toJson(channels));
     }
 
     @GetMapping("/{channelId}")
-    public String getChannel(HttpServletRequest request, @PathVariable String channelId) {
-        Channel channel = model.with(getAccessToken(request)).getChannel(channelId);
+    public CompletableFuture<String> getChannel(
+            @RequestHeader("X-API-Key") String apiKey,
+            @PathVariable String channelId
+    ) {
+        Channel channel = model.with(apiKey).getChannel(channelId);
 
         JsonArray members = new JsonArray();
         channel.getMembers().forEach(member -> {
@@ -56,12 +64,12 @@ public class ChannelController extends BaseController {
         obj.addProperty("name", channel.getName());
         obj.add("members", members);
         obj.addProperty("messageToken", "HEAD");
-        return toJson(obj);
+        return CompletableFuture.completedFuture(toJson(obj));
     }
 
     @GetMapping("/{channelId}/messages/")
-    public String getChannelMessages(
-            HttpServletRequest request,
+    public CompletableFuture<String> getChannelMessages(
+            @RequestHeader("X-API-Key") String apiKey,
             @PathVariable String channelId,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String direction,
@@ -69,7 +77,7 @@ public class ChannelController extends BaseController {
     ) {
         from = StringUtils.defaultIfBlank(from, "HEAD");
         direction = StringUtils.defaultIfBlank(direction, "previous");
-        MessageChunk chunk = model.with(getAccessToken(request)).getMessages(channelId, from, direction, type);
+        MessageChunk chunk = model.with(apiKey).getMessages(channelId, from, direction, type);
         JsonObject res = new JsonObject();
         res.add("messages", GsonUtil.asArrayObj(chunk.getMessages().stream()
                 .map(msg -> {
@@ -90,15 +98,19 @@ public class ChannelController extends BaseController {
         tokens.addProperty("next", chunk.getEndToken());
         res.add("token", tokens);
 
-        return toJson(res);
+        return CompletableFuture.completedFuture(toJson(res));
     }
 
     @PostMapping("/{channelId}/messages/")
-    public String addChanelMessage(HttpServletRequest request, @PathVariable String channelId) {
+    public CompletableFuture<String> addChanelMessage(
+            @RequestHeader("X-API-Key") String apiKey,
+            @PathVariable String channelId,
+            HttpServletRequest request
+    ) {
         JsonObject body = GsonUtil.parseObj(getBody(request));
-        String evId = model.with(getAccessToken(request)).putMessage(channelId, body);
+        String evId = model.with(apiKey).putMessage(channelId, body);
 
-        return toJson(GsonUtil.makeObj("id", evId));
+        return CompletableFuture.completedFuture(toJson(GsonUtil.makeObj("id", evId)));
     }
 
 }

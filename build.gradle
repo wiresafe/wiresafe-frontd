@@ -6,7 +6,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:2.0.3.RELEASE")
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:2.1.0.RELEASE")
     }
 }
 
@@ -18,8 +18,8 @@ repositories {
 
 
 dependencies {
-    compile 'org.springframework.boot:spring-boot-starter-web:2.0.3.RELEASE'
-    compile 'io.kamax:matrix-java-sdk:0.0.14-1-g0f63881'
+    compile 'org.springframework.boot:spring-boot-starter-web:2.1.0.RELEASE'
+    compile 'io.kamax:matrix-java-sdk:0.0.18-1-gb7375e3'
     compile 'com.google.guava:guava:25.1-jre'
 
     // For Synapse DB

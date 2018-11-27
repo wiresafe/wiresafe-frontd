@@ -17,10 +17,10 @@ import io.kamax.matrix.json.event.MatrixJsonRoomNameEvent;
 import io.kamax.matrix.room.MatrixRoomMessageChunkOptions;
 import io.kamax.matrix.room.RoomCreationOptions;
 import io.kamax.matrix.room._MatrixRoomMessageChunk;
+import java8.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.MediaType;
 
-import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -45,7 +45,7 @@ public class Session {
         Message msg = new Message();
         msg.setId(HexUtil.encode(ev.getId()));
         msg.setChannelId(HexUtil.encode(roomId));
-        msg.setTimestamp(ev.getTime().toEpochMilli());
+        msg.setTimestamp(ev.getTime());
         msg.setSender(HexUtil.encode(ev.getSender().getId()));
         if ("m.text".equalsIgnoreCase(ev.getBodyType())) {
             msg.setType("Text");
@@ -289,8 +289,8 @@ public class Session {
         return new SyncChunk(joined, left, messages, HexUtil.encode(data.nextBatchToken()));
     }
 
-    public String upload(InputStream io, long length, String type) {
-        String mxcUri = client.putMedia(io, length, type);
+    public String upload(byte[] data, String type) {
+        String mxcUri = client.putMedia(data, type);
         return HexUtil.encode(mxcUri);
     }
 
