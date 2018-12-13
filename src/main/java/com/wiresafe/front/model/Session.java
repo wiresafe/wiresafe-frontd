@@ -112,7 +112,7 @@ public class Session {
         roomFilter.add("ephemeral", excludeAllTypesFilter);
         roomFilter.add("account_data", excludeAllTypesFilter);
         roomFilter.add("timeline", roomEventFilter);
-        roomFilter.add("state", roomEventFilter);
+        //roomFilter.add("state", roomEventFilter);
 
         JsonObject filter = new JsonObject();
         filter.add("presence", excludeAllTypesFilter);
